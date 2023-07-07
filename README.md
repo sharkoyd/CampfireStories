@@ -12,7 +12,8 @@ CampStories is a full-stack application built with Django and Flutter. It provid
 - Django Signals: A mechanism in Django for sending and receiving signals, which allows decoupled applications to get notified when certain actions occur.
 - Boto3: The AWS SDK for Python, used to interact with Amazon Polly for text-to-speech conversion and generating audio files.
 - Twilio: A cloud communications platform used for sending SMS messages to users.
-visit requirements.txt for more info' on packages needed
+- JWT webtokens
+- visit requirements.txt for more info' on packages needed
 ### Frontend (Flutter)
 
 - Flutter: An open-source UI software development kit created by Google for building cross-platform applications for mobile, web, and desktop.
