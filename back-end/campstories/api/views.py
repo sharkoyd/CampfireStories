@@ -464,44 +464,26 @@ def CreateProfile(request):
 
     
 
+@api_view(['GET'])
+def GetUserInfo(request):
+    user = utils.AuthCheck(request)
+    if user is None : 
+        return JsonResponse({'message': 'You are not logged In'}, status=404)
+
+    try:
+        user = request.user
+        # Retrieve the UserProfile instance
+        user_profile = get_object_or_404(UserProfile, user=user)
+
+        # Return the UserProfile instance in the response
+        return Response({
+            'first_name': user_profile.name,
+            'last_name': user_profile.profilepic,
+            'username': user.username,
+            'password': user.password,
+        })
+    except:
+        return Response({'message': 'Invalid params'}, status=401)
 
 
 
-
-#use the code below to fast add json  containing information about the new stories you want to add manually the database  use this format below  -------------------------------------------------------------
-# [
-#   {
-#     "title": "",
-#     "content": "",
-#     "age_range": 0,
-#     "gender": "Any",
-#     "story_type": "fantasy",
-#     "picture": "path/to/story_pictures/magic_crayons.jpg",
-#     "length_minutes": 1
-#   },]
-
-
-# def create_stories_from_json(json_data):
-#     stories = json.loads(json_data)
-
-#     for story_data in stories:
-#         story = Story(
-#             title=story_data['title'],
-#             content=story_data['content'],
-#             age_range=story_data['age_range'],
-#             gender=story_data['gender'],
-#             story_type=story_data['story_type'],
-#             length_minutes=story_data['length_minutes']
-#         )
-#         story.save()
-
-# # Example usage
-# json_data = '''
-
-
-
-
-
-# '''
-
-# create_stories_from_json(json_data)

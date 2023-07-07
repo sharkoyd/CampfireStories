@@ -15,6 +15,7 @@ urlpatterns = [
     path('PhoneNumConfirm', views.PhoneNumConfirm, name='phone_num_confirm'),
     path('VerifySignUpCode', views.VerifySignUpCode, name='verify_login_code'),
     path('RegisterWithPhoneNum', views.RegisterWithPhoneNum, name='register_with_phone_num'),
+    path('GetUserInfo', views.GetUserInfo, name='get_user_info'),
 
 
     # path('users/', views.UserList.as_view()),
