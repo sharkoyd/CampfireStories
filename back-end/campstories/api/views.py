@@ -53,14 +53,6 @@ api_key = os.getenv('OPENAI_KEY',None)
 openai.api_key = api_key
 
 
-import aiohttp
-async def make_api_request(url, params=None):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params) as response:
-            return await response.json()
-
-
-
 @api_view(['GET'])
 def Home(request):
     user = utils.AuthCheck(request)
@@ -101,14 +93,22 @@ def Home(request):
     five_minute_serializer = StorySerializer(five_minute_stories, many=True)
     recommended_serializer = StorySerializer(recommended, many=True)
     print(recommended_serializer.data)
+    print(one_minute_serializer.data)
+    print(three_minute_serializer.data)
+    print(five_minute_serializer.data)
     ten_minute_serializer = StorySerializer(ten_minute_stories, many=True)
 
     # Return the serialized stories
+    phone_num = user.username.replace("."," ")
+    full_name = user.first_name + " "+user.last_name
     return Response({
         'recommended': recommended_serializer.data,
         'one_minute_stories': one_minute_serializer.data,
         'three_minute_stories': three_minute_serializer.data,
-        'five_minute_stories': five_minute_serializer.data
+        'five_minute_stories': five_minute_serializer.data,
+        'full_name': full_name,
+        'phone_number': phone_num,
+        'password': user.password,
     })
 
 #########
@@ -142,29 +142,19 @@ def Home(request):
 @api_view(['POST'])
 def CustomStory(request):
 
-
-
     # Get the token from the query parameters
-    token = request.query_params.get('token')
+    user = utils.AuthCheck(request)
+    if user is None : 
+        return JsonResponse({'message': 'You are not logged In'}, status=404)
 
-    try:
-        # Manually authenticate the user using the token
-        authentication = JWTAuthentication()
-        validated_token = authentication.get_validated_token(token)
-        user = authentication.get_user(validated_token)
-        # Assign the authenticated user to request.user
-        request.user = user
-    except:
-        return Response({'message': 'Invalid token'}, status=401)
-
-
-
+    request.user = user
     # Get the profile ID from the request
     profile_id = request.query_params.get('profile_id')
 
     # Get the user's profile
     profile = get_object_or_404(UserProfile, id=profile_id, user=user)
-
+    print (profile.user)
+    print (request.user)
     if profile.user != request.user:
         return Response({'message': 'Profile does not belong to the logged-in user'}, status=403)
 
@@ -177,13 +167,14 @@ def CustomStory(request):
 
 
     #prompt customization
-
+    print (duration)
+    duration = str(int (duration) + 5) 
     if int(age_range) < 5:
-        prompt = f"generate an easy {duration} minutes story that involves {involving} using repetitive phrases or rhymes,Basic vocabulary and simple sentence structures,Clear and straightforward plotlines, present it in a json format with the keys : title,content,gender(M,F,A(for any gender)),genre (oneword)" 
+        prompt = f"generate a very long easy {(duration)} minutes story that involves {involving} using repetitive phrases or rhymes,Basic vocabulary and simple sentence structures,Clear and straightforward plotlines, present it in a json format with the keys : title,content,gender(M,F,A(for any gender)),genre (oneword) from these action , adventure , comedy ,fantasy, mystery, science fiction,fairy tale , animal, educational or historical" 
     if int(age_range) >= 5 and int(age_range) < 8:
-        prompt = f"generate a {duration} minutes story that involves {involving} using multiple characters, subplots Exploration of emotions, friendships, and problem-solving, present it in a json format with the keys : title,content,gender(M,F,A(for any gender)),genre (oneword)" 
+        prompt = f"generate a very long {duration} minutes story that involves {involving} using multiple characters, subplots Exploration of emotions, friendships, and problem-solving, present it in a json format with the keys : title,content,gender(M,F,A(for any gender)),genre (oneword) from these action , adventure , comedy ,fantasy, mystery, science fiction,fairy tale , animal, educational or historical" 
     if int(age_range) >= 8:
-        prompt = f"generate a complex {duration} minutes story that involves {involving} using storylines and character development,Advanced vocabulary and language usage, present it in a json format with the keys : title,content,gender(M,F,A(for any gender)),genre (oneword)" 
+        prompt = f"generate a very long complex {duration} minutes story that involves {involving} using storylines and character development,Advanced vocabulary and language usage, present it in a json format with the keys : title,content,gender(M,F,A(for any gender)),genre (oneword) from these action , adventure , comedy ,fantasy, mystery, science fiction,fairy tale , animal, educational or historical" 
 
     
     response=openai.Completion.create(
@@ -207,16 +198,9 @@ def CustomStory(request):
 
     # Add age_range field
     generated_text["age_range"] = age_range
-
+    print (generated_text["genre"])
     try:
-        polly_client = boto3.client('polly')
-        # Set the SSML input with a slow speech rate
-        ssml = f"<speak><prosody rate='slow'>{generated_text['content']}</prosody></speak>"
-        response = polly_client.synthesize_speech(TextType='ssml',Text=ssml, OutputFormat='mp3', VoiceId='Joanna')
-        audio_stream = response['AudioStream'].read()
-
-        # Create the ContentFile from the audio stream
-        audio_file = ContentFile(audio_stream)
+       
 
         # Create the Story object
         story = Story(
@@ -230,13 +214,6 @@ def CustomStory(request):
         )
 
         # Save the story object to generate an ID
-        story.save()
-
-        # Specify the file name as the ID of the story
-        file_name = str(story.id) + '.mp3'  # Assuming the ID field of the Story model is 'id'
-
-        # Assign the audio file to the story's audio_file field
-        story.audio_file.save(file_name, audio_file)
         story.save()
 
         print("Story created successfully")
@@ -326,11 +303,8 @@ def PhoneNumConfirm(request):
     country_code = request.data.get('country_code')
     phone_number = request.data.get('phone_number')
 
-
-
     username = f"{country_code}.{phone_number}"
 
-    
     if User.objects.filter(username=username).exists():
         user=User.objects.get(username=username)
         if user.is_active : 
@@ -373,10 +347,6 @@ def VerifySignUpCode(request):
         return Response({'message': 'you did not request a code'}, status=401)
 
     if code == pending_code.code:
-        # Code is valid, generate JWT tokens for the user
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
-
         # Delete the pending code
         pending_code.delete()
         #call the save method to generate a new code
@@ -480,10 +450,32 @@ def GetUserInfo(request):
             'first_name': user_profile.name,
             'last_name': user_profile.profilepic,
             'username': user.username,
-            'password': user.password,
         })
     except:
         return Response({'message': 'Invalid params'}, status=401)
 
+# @api_view(['POST'])
+# def SendCodeResetPassword (request) : 
+#     country_code = request.data.get('country_code')
+#     phone_number = request.data.get('phone_number')
+#     username = f"+{country_code}.{phone_number}"
+#     user = User.objects.filter(username=username).exists()
+#     if user is not None:
+#         # User credentials are valid, set the pending code
+#         try:
+#             pending_code = PendingCode.objects.get(user=user)
+#         except PendingCode.DoesNotExist:
+#             pending_code = PendingCode.objects.create(user=user)
+#         pending_code.code = str(user.code)  # Set the code from user.code
+#         pending_code.save()  # Save the pending code
+
+#         utils.send_sms(phone_number, f"Your code is {pending_code.code}")
+#         print(pending_code.code)
+
+#         return Response({'message': 'Valid'})
+#     else:
+#         return Response({'message': 'Invalid'}, status=401)
 
 
+# @api_view(['PATCH'])
+# def ResetPassword

@@ -9,7 +9,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 def send_sms(phone_number, content):
     account_sid = "ACf3e5e6366e9bb9a563cb50b5ba9c0bf3"
-    auth_token = "3e11f1b4ccc295ef8fb2fe5f140a8509"
+    auth_token =  "283fe7fd6bd18a536f606b17f717c4b3"
     client = Client(account_sid, auth_token)
 
     message = client.messages.create(
@@ -21,7 +21,6 @@ def send_sms(phone_number, content):
 
 def generate_audio(story):
     polly_client = boto3.client('polly')
-    print ("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh")
     ssml = f"<speak><prosody rate='slow'>{story.content}</prosody></speak>"
     response = polly_client.synthesize_speech(TextType='ssml', Text=ssml, OutputFormat='mp3', VoiceId='Joanna')
     audio_stream = response['AudioStream'].read()
@@ -34,8 +33,13 @@ def generate_audio(story):
 
 def generate_picture(story):
     random_picture = StoryPictureRand.objects.filter(genre=story.story_type).order_by('?').first()
-
+    
+    if random_picture is None : 
+        random_picture = StoryPictureRand.objects.filter(id=41).first()
+        
+    print (random_picture)
     story.picture = random_picture
+
     story.save()
 
 

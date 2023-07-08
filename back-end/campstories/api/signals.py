@@ -23,7 +23,7 @@ def generate_audio_for_story(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Story)
 def generate_picture_for_story(sender, instance, created, **kwargs):
-    if not instance.picture and created:
+    if not instance.picture :
         print("Generating picture for story")
         # Generate picture for the new story
         generate_picture(instance)

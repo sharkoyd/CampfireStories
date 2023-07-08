@@ -58,7 +58,7 @@ class UserProfile(models.Model):
         ('historical', 'Historical'),
         # Add more story types as needed
     ]
-
+    #action , adventure , comedy ,fantasy, mystery, science fiction,fairy tale , animal, educational or historical
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='profiles')
     name = models.CharField(max_length=255)
